@@ -1,0 +1,171 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "CountChoculaDnsName": {
+            "type": "string",
+            "defaultValue": "CountChoculadnsnameupdateme",
+            "minLength": 1
+        }
+    },
+    "variables": {
+        "CountChoculaVNETPrefix": "192.168.0.0/24",
+        "CountChoculaVNETSubnet1Name": "CountChocula",
+        "CountChoculaVNETSubnet1Prefix": "192.168.0.0/24",
+        "CountChoculaName": "CountChocula",
+        "CountChoculaAdminUserName": "stormtrooperio",
+        "CountChoculaAdminPassword": "Password.1!!",
+        "CountChoculaImagePublisher": "MicrosoftWindowsServer",
+        "CountChoculaImageOffer": "WindowsServer",
+        "CountChoculaWindowsOSVersion": "2016-Datacenter",
+        "CountChoculaOSDiskName": "[concat(variables('CountChoculaName'), '-OSDISK')]",
+        "CountChoculaVmSize": "Standard_D2s_v3",
+        "CountChoculaVnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'CountChoculaVNET')]",
+        "CountChoculaSubnetRef": "[concat(variables('CountChoculaVnetID'), '/subnets/', variables('CountChoculaVNETSubnet1Name'))]",
+        "CountChoculaNicName": "[concat(variables('CountChoculaName'), '-NIC')]",
+        "CountChocula-PUBIPName": "[concat(variables('CountChoculaName'), '-PIP')]",
+        "CountChoculaInstallHyperVScriptFolder": ".",
+        "CountChoculaInstallHyperVScriptFileName": "InstallCountChocula.ps1",
+        "CountChoculaInstallHyperVURL": "https://raw.githubusercontent.com/deltadan/CountChocula/master/InstallCountChocula.ps1"
+    },
+    "resources": [
+        {
+            "name": "CountChoculaVNET",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-03-30",
+            "dependsOn": [],
+            "tags": {
+                "displayName": "CountChoculaVNET"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('CountChoculaVNETPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('CountChoculaVNETSubnet1Name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('CountChoculaVNETSubnet1Prefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('CountChocula-PUBIPName')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2017-10-01",
+            "dependsOn": [],
+            "tags": {
+                "displayName": "CountChocula-PUBIP"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[parameters('CountChoculaDnsName')]"
+                }
+            }
+        },
+        {
+            "name": "[variables('CountChoculaNicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2017-10-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'CountChoculaVNET')]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('CountChocula-PUBIPName'))]"
+            ],
+            "tags": {
+                "displayName": "CountChoculaNic"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('CountChoculaSubnetRef')]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('CountChocula-PUBIPName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('CountChoculaName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2017-12-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('CountChoculaNicName'))]"
+            ],
+            "tags": {
+                "displayName": "CountChocula"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('CountChoculaVmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('CountChoculaName')]",
+                    "adminUsername": "[variables('CountChoculaAdminUsername')]",
+                    "adminPassword": "[variables('CountChoculaAdminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('CountChoculaImagePublisher')]",
+                        "offer": "[variables('CountChoculaImageOffer')]",
+                        "sku": "[variables('CountChoculaWindowsOSVersion')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "diskSizeGB": 1023
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('CountChoculaNicName'))]"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "name": "InstallCountChoculaApps",
+                    "type": "extensions",
+                    "location": "[resourceGroup().location]",
+                    "apiVersion": "2017-12-01",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('CountChoculaName'))]"
+                    ],
+                    "tags": {
+                        "displayName": "Install CountChocula Applications"
+                    },
+                    "properties": {
+                        "publisher": "Microsoft.Compute",
+                        "type": "CustomScriptExtension",
+                        "typeHandlerVersion": "1.4",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "fileUris": [
+                                "[variables('CountChoculaInstallHyperVURL')]"
+                            ],
+                            "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('CountChoculaInstallHyperVScriptFolder'), '/', variables('CountChoculaInstallHyperVScriptFileName'))]"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {}
+}
