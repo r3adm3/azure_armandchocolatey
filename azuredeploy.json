@@ -25,8 +25,8 @@
         "CountChoculaNicName": "[concat(variables('CountChoculaName'), '-NIC')]",
         "CountChocula-PUBIPName": "[concat(variables('CountChoculaName'), '-PIP')]",
         "CountChoculaInstallHyperVScriptFolder": ".",
-        "CountChoculaInstallHyperVScriptFileName": "InstallCountChocula.ps1",
-        "CountChoculaInstallHyperVURL": "https://raw.githubusercontent.com/deltadan/CountChocula/master/InstallCountChocula.ps1"
+        "CountChoculaInstallHyperVScriptFileName": "standardtools.ps1",
+        "CountChoculaInstallHyperVURL": "https://raw.githubusercontent.com/r3adm3/azure_armandchocolatey/master/standardtools.ps1"
     },
     "resources": [
         {
